@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>税コム アタックリスト</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Hiragino Kaku Gothic ProN','Yu Gothic UI',Meiryo,sans-serif;background:#f5f6f8;color:#1a1a2e;height:100vh;overflow:hidden;display:flex;flex-direction:column;font-size:13px}
+header{height:46px;background:#1a1d2e;display:flex;align-items:center;gap:10px;padding:0 16px;flex-shrink:0}
+.logo-name{color:#e8eaf0;font-size:13px;font-weight:600;white-space:nowrap}
+.logo-ver{color:#4a5070;font-size:10px;background:#252840;padding:1px 5px;border-radius:3px}
+.ptabs{display:flex;gap:2px;flex:1;overflow:hidden}
+.ptab{padding:3px 9px;border-radius:4px;cursor:pointer;font-size:12px;color:#6b7090;white-space:nowrap;display:flex;align-items:center;gap:4px}
+.ptab:hover{background:#252840;color:#c8cce0}
+.ptab.on{background:#252840;color:#e8eaf0;font-weight:600}
+.ptab .n{font-size:11px;color:#4a5070}
+.upload-btn{height:32px;padding:0 16px;background:#1e293b;border:1px solid #334155;border-radius:6px;color:#f1f5f9;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;display:flex;align-items:center;line-height:1;letter-spacing:.01em}
+.upload-btn:hover{background:#0f172a}
+#fileinput{display:none}
+.avatar{width:28px;height:28px;background:#3a3d5c;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#8b90b0;flex-shrink:0}
+.banner{padding:5px 16px;font-size:12px;color:#2db87a;background:rgba(62,207,142,0.07);border-bottom:1px solid rgba(62,207,142,0.15);display:flex;align-items:center;gap:7px;flex-shrink:0}
+.body-wrap{flex:1;display:flex;overflow:hidden}
+
+/* SIDEBAR */
+.sidebar{width:210px;background:#fff;border-right:1px solid #e8eaef;overflow-y:auto;flex-shrink:0}
+.sidebar::-webkit-scrollbar{width:3px}
+.sidebar::-webkit-scrollbar-thumb{background:#e0e2e8;border-radius:3px}
+.filter-header{display:flex;align-items:center;gap:7px;padding:10px 12px 8px;border-bottom:1px solid #f0f1f5}
+.filter-tag{background:#e8f5ff;color:#2563eb;font-size:10px;font-weight:700;padding:2px 7px;border-radius:3px}
+.filter-title{font-size:12px;font-weight:600;color:#374151}
+.sec{padding:8px 12px}
+.sec-label{font-size:10px;font-weight:700;color:#9ca3af;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+.filter-input{width:100%;height:26px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;padding:0 7px;outline:none;font-family:inherit;color:#374151}
+.filter-input:focus{border-color:#3ecf8e}
+.chk-row{display:flex;align-items:center;justify-content:space-between;padding:3px 0;cursor:pointer}
+.chk-left{display:flex;align-items:center;gap:6px}
+.chk-left input[type=checkbox]{accent-color:#3ecf8e;cursor:pointer;width:13px;height:13px}
+.chk-name{font-size:12px;color:#374151}
+.chk-cnt{font-size:11px;color:#9ca3af}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot-未対応,.dot-未登録{background:#d1d5db}
+.dot-リード獲得{background:#f59e0b}
+.dot-商談中,.dot-進行中{background:#3b82f6}
+.dot-受注,.dot-進行中（アップセル）{background:#10b981}
+.dot-失注{background:#ef4444}
+.dot-保留{background:#8b5cf6}
+.divider{height:1px;background:#f3f4f6;margin:4px 0}
+.range-wrap{display:flex;gap:5px;align-items:center}
+.range-input{flex:1;height:26px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;padding:0 6px;outline:none;font-family:inherit;color:#374151}
+.range-input:focus{border-color:#3ecf8e}
+.qbtns{display:flex;gap:4px;margin-top:5px;flex-wrap:wrap}
+.qbtn{padding:2px 7px;border:1px solid #e5e7eb;border-radius:3px;font-size:11px;cursor:pointer;background:#f9fafb;color:#374151;font-family:inherit}
+.qbtn:hover{border-color:#3ecf8e;color:#059669}
+.tgl-row{display:flex;align-items:center;justify-content:space-between;padding:4px 0}
+.tgl-name{font-size:12px;color:#374151}
+.tgl{position:relative;width:30px;height:17px;flex-shrink:0}
+.tgl input{display:none}
+.tgl-tr{position:absolute;inset:0;background:#d1d5db;border-radius:9px;cursor:pointer;transition:background .2s}
+.tgl-tr:before{content:'';position:absolute;width:11px;height:11px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+.tgl input:checked+.tgl-tr{background:#3ecf8e}
+.tgl input:checked+.tgl-tr:before{transform:translateX(13px)}
+
+/* LIST */
+.list-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.list-toolbar{height:38px;background:#fff;border-bottom:1px solid #e8eaef;display:flex;align-items:center;padding:0 13px;gap:10px;flex-shrink:0}
+.count-label{font-size:12px;color:#6b7280}
+.count-label b{color:#111827}
+.sort-sel{height:26px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;padding:0 7px;outline:none;font-family:inherit;color:#374151;background:#fff;cursor:pointer}
+.csv-btn{margin-left:auto;height:26px;padding:0 9px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;cursor:pointer;color:#374151;font-family:inherit;background:#fff}
+.csv-btn:hover{border-color:#3ecf8e;color:#059669}
+.list-head{display:grid;grid-template-columns:1fr 72px 100px 90px;padding:0 13px;height:28px;align-items:center;background:#f9fafb;border-bottom:1px solid #e8eaef;flex-shrink:0}
+.list-head span{font-size:10px;color:#9ca3af;font-weight:600;letter-spacing:.04em}
+.list-body{flex:1;overflow-y:auto;background:#fff}
+.list-body::-webkit-scrollbar{width:4px}
+.list-body::-webkit-scrollbar-thumb{background:#e5e7eb;border-radius:3px}
+.row{display:grid;grid-template-columns:1fr 72px 100px 90px;padding:0 13px;height:46px;align-items:center;border-bottom:1px solid #f3f4f6;cursor:pointer;transition:background .1s;user-select:none}
+.row:hover{background:#f9fafb}
+.row.sel{background:#f0fdf8;border-left:3px solid #3ecf8e}
+.co-cell{min-width:0}
+.cname{font-size:13px;font-weight:500;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cmeta{font-size:11px;color:#9ca3af;margin-top:1px;display:flex;align-items:center;gap:5px}
+.dl-tag{display:inline-flex;align-items:center;background:#fff7ed;color:#ea580c;border:1px solid #fed7aa;padding:1px 5px;border-radius:3px;font-size:10px;font-weight:600}
+.tc{text-align:center}
+.sales-v{font-size:13px;font-weight:500;color:#111827}
+.sbadge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600;white-space:nowrap}
+.s-未対応,.s-未登録{background:#f3f4f6;color:#6b7280}
+.s-リード獲得{background:#fffbeb;color:#d97706}
+.s-商談中,.s-進行中{background:#eff6ff;color:#2563eb}
+.s-受注,.s-進行中（アップセル）{background:#f0fdf4;color:#16a34a}
+.s-失注{background:#fef2f2;color:#dc2626}
+.s-保留{background:#faf5ff;color:#7c3aed}
+
+/* DETAIL */
+.detail{width:520px;background:#fff;border-left:1px solid #e8eaef;display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;transition:width .2s}
+.detail.closed{width:0;overflow:hidden}
+.detail-body{flex:1;overflow-y:auto}
+.detail-body::-webkit-scrollbar{width:3px}
+.detail-body::-webkit-scrollbar-thumb{background:#e5e7eb}
+.d-head{padding:14px 18px 12px;border-bottom:1px solid #f3f4f6;display:flex;align-items:flex-start;justify-content:space-between}
+.d-lbc-row{font-size:11px;color:#9ca3af;display:flex;align-items:center;gap:5px;margin-bottom:4px}
+.d-copy{background:none;border:none;color:#9ca3af;cursor:pointer;font-size:11px;padding:0}
+.d-copy:hover{color:#3ecf8e}
+.d-name{font-size:20px;font-weight:700;color:#111827;line-height:1.2;margin-bottom:3px}
+.d-kana{font-size:11px;color:#9ca3af;margin-bottom:7px}
+.d-tagrow{display:flex;flex-wrap:wrap;gap:4px}
+.d-tag{background:#f3f4f6;border-radius:3px;padding:2px 7px;font-size:11px;color:#6b7280}
+.d-close{background:none;border:none;cursor:pointer;color:#9ca3af;font-size:18px;line-height:1;flex-shrink:0;margin-left:8px}
+.d-close:hover{color:#374151}
+.d-sales-cards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:12px 18px;background:#f9fafb;border-bottom:1px solid #f3f4f6}
+.sc-lbl{font-size:10px;color:#9ca3af;margin-bottom:4px}
+.sc-v{font-size:17px;font-weight:700;color:#111827}
+.sc-v.cur{color:#059669}
+.sc-yoy{font-size:11px;margin-top:2px}
+.yoy-up{color:#16a34a}
+.yoy-dn{color:#dc2626}
+.dsec{padding:13px 18px;border-bottom:1px solid #f3f4f6}
+.dsec-ttl{font-size:12px;font-weight:700;color:#374151;margin-bottom:9px;display:flex;align-items:center;gap:6px}
+.dsec-ttl::before{content:'';width:3px;height:12px;background:#3ecf8e;border-radius:2px;display:inline-block}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px}
+.info-item .il{font-size:10px;color:#9ca3af;margin-bottom:2px}
+.info-item .iv{font-size:13px;color:#111827}
+.info-item .iv a{color:#059669;text-decoration:none}
+.info-item .iv a:hover{text-decoration:underline}
+.news-item{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid #f3f4f6}
+.news-item:last-child{border-bottom:none}
+.news-ttl{font-size:12px;color:#374151;line-height:1.4}
+.news-ttl a{color:#374151;text-decoration:none}
+.news-ttl a:hover{color:#059669}
+.news-dt{font-size:11px;color:#9ca3af;white-space:nowrap;flex-shrink:0}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:200px;gap:10px}
+.empty-ico{font-size:32px;opacity:.25}
+.empty-msg{font-size:12px;color:#9ca3af}
+</style>
+</head>
+<body>
+
+<header>
+  <div style="display:flex;align-items:center;gap:7px;flex-shrink:0">
+    <span class="logo-name">税コム アタックリスト</span>
+    <span class="logo-ver">v2 · ベータ</span>
+  </div>
+  <div class="ptabs" id="ptabs"></div>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0">
+    <label for="fi-yu" class="upload-btn" id="btn-yu">📊 ユーソナー <span id="yu-count"></span></label>
+    <input type="file" id="fi-yu" accept=".xlsx,.xls,.csv" multiple onchange="onUploadYusona(event)">
+    <label for="fi-sf" class="upload-btn" id="btn-sf" style="background:#1e293b;border:1px solid #334155">🔗 Salesforce <span id="sf-count"></span></label>
+    <input type="file" id="fi-sf" accept=".xlsx,.xls,.csv" multiple onchange="onUploadSF(event)">
+    <button onclick="saveJSON()" id="save-btn" style="display:none;height:32px;padding:0 14px;background:#6366f1;border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;align-items:center;gap:5px">💾 データを保存</button>
+    <div class="avatar">山</div>
+  </div>
+</header>
+
+<div class="banner" id="banner">
+  ⚡ サンプルデータ（16社）で動作中。実データの取り込みは右上のボタンから。
+</div>
+<div id="import-bar" style="display:none;padding:6px 16px;background:#f0fdf4;border-bottom:1px solid #bbf7d0;align-items:center;gap:10px;font-size:12px;color:#374151">
+  <span id="import-msg" style="color:#059669;font-weight:600"></span>
+  <button onclick="mergeAndDisplay()" id="btn-merge" style="display:none;height:26px;padding:0 14px;background:#3ecf8e;border:none;border-radius:4px;color:#fff;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600">結合して表示</button>
+  <button onclick="cancelImport()" style="height:26px;padding:0 10px;background:#fff;border:1px solid #e5e7eb;border-radius:4px;color:#9ca3af;font-size:12px;cursor:pointer;font-family:inherit">キャンセル</button>
+</div>
+
+<div class="body-wrap">
+  <div class="sidebar">
+    <div class="filter-header">
+      <span class="filter-tag">適用</span>
+      <span class="filter-title">フィルタ条件</span>
+    </div>
+    <div class="sec">
+      <div class="sec-label">自由検索</div>
+      <div style="position:relative">
+        <span style="position:absolute;left:7px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:12px;pointer-events:none">🔍</span>
+        <input id="si" class="filter-input" type="text" placeholder="社名 / カナ / LBC / 代表者名" oninput="doFilter()" style="padding-left:24px">
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="sec">
+      <div class="sec-label">業種大分類</div>
+      <select id="industry-select" class="filter-input" onchange="doFilter()" style="height:28px">
+        <option value="">すべて</option>
+      </select>
+    </div>
+    <div class="divider"></div>
+    <div class="sec">
+      <div class="sec-label">直近決算月</div>
+      <div class="range-wrap">
+        <input class="range-input" id="f-month" type="number" placeholder="例: 3" min="1" max="12" oninput="doFilter()">
+        <span style="color:#9ca3af;font-size:11px">月</span>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="sec">
+      <div class="sec-label">商談状況</div>
+      <select id="status-select" class="filter-input" onchange="doFilter()" style="height:28px">
+        <option value="">すべて</option>
+      </select>
+    </div>
+    <div class="divider"></div>
+    <div class="sec">
+      <div class="sec-label">当期売上高（億円）</div>
+      <div class="range-wrap">
+        <input class="range-input" id="smin" type="number" placeholder="下限" oninput="doFilter()">
+        <span style="color:#9ca3af;font-size:11px">〜</span>
+        <input class="range-input" id="smax" type="number" placeholder="上限" oninput="doFilter()">
+      </div>
+      <div class="qbtns">
+        <button class="qbtn" onclick="setRange(1,5)">1〜5億</button>
+        <button class="qbtn" onclick="setRange(5,10)">5〜10億</button>
+        <button class="qbtn" onclick="setRange(10,999)">10億+</button>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="sec">
+      <div class="sec-label">クイックフィルタ</div>
+      <div class="tgl-row">
+        <span class="tgl-name">直近3ヶ月以内決算企業</span>
+        <label class="tgl"><input type="checkbox" id="t-3m" onchange="doFilter()"><span class="tgl-tr"></span></label>
+      </div>
+      <div class="tgl-row">
+        <span class="tgl-name">成長企業（前年比+）</span>
+        <label class="tgl"><input type="checkbox" id="t-grow" onchange="doFilter()"><span class="tgl-tr"></span></label>
+      </div>
+    </div>
+  </div>
+
+  <div class="list-wrap">
+    <div class="list-toolbar">
+      <div class="count-label"><b id="fc">0</b> 件 / 全 <span id="tc">0</span> 件</div>
+      <select class="sort-sel" onchange="doFilter()">
+        <option value="sd">並び替え：当期売上↓</option>
+        <option value="sa">並び替え：当期売上↑</option>
+        <option value="na">並び替え：社名 A→Z</option>
+      </select>
+      <button class="csv-btn" onclick="exportCSV()">📥 CSV</button>
+    </div>
+    <div class="list-head">
+      <span>社名 / 所在</span>
+      <span class="tc">決算</span>
+      <span class="tc">当期売上</span>
+      <span class="tc">商談状況</span>
+    </div>
+    <div class="list-body" id="lb"></div>
+  </div>
+
+  <div class="detail closed" id="dp">
+    <div class="d-head">
+      <div style="min-width:0;flex:1">
+        <div class="d-lbc-row">LBC <span id="d-lbc">—</span> <button class="d-copy" onclick="copyLbc()">📋</button></div>
+        <div class="d-name" id="d-name">—</div>
+        <div class="d-kana" id="d-kana"></div>
+        <div class="d-tagrow" id="d-tags"></div>
+      </div>
+      <button class="d-close" onclick="closeDetail()">×</button>
+    </div>
+    <div class="detail-body">
+      <div class="d-sales-cards" id="d-sales-cards" style="display:none">
+        <div><div class="sc-lbl">前々期売上</div><div class="sc-v" id="d-s2">—</div></div>
+        <div><div class="sc-lbl">前期売上</div><div class="sc-v" id="d-s1">—</div><div class="sc-yoy" id="d-y1"></div></div>
+        <div style="border-left:2px solid #3ecf8e;padding-left:12px">
+          <div class="sc-lbl" id="d-period-lbl">当期売上</div>
+          <div class="sc-v cur" id="d-s0">—</div>
+          <div class="sc-yoy" id="d-y0"></div>
+        </div>
+      </div>
+      <div id="d-chart" style="padding:0 18px 10px;border-bottom:1px solid #f3f4f6"></div>
+      <div class="dsec" id="d-lbc-sec" style="display:none">
+        <div class="dsec-ttl">LBC情報</div>
+        <div class="info-grid" id="d-lbc-grid"></div>
+      </div>
+      <div class="dsec" id="d-addr-sec" style="display:none">
+        <div class="dsec-ttl">所在地・連絡先</div>
+        <div class="info-grid" id="d-addr-grid"></div>
+      </div>
+      <div class="dsec">
+        <div class="dsec-ttl">クラウドサイン取引情報</div>
+        <div class="info-grid">
+          <div class="info-item"><div class="il">商談状況</div><div class="iv" id="d-cst">—</div></div>
+          <div class="info-item"><div class="il">取引先所有者</div><div class="iv" id="d-cow">—</div></div>
+          <div class="info-item"><div class="il">登録リード数</div><div class="iv" id="d-cld">—</div></div>
+          <div class="info-item"><div class="il">MRR</div><div class="iv" id="d-mrr">—</div></div>
+        </div>
+      </div>
+      <div class="dsec" id="d-news-sec">
+        <div class="dsec-ttl" style="justify-content:space-between">
+          <span style="display:flex;align-items:center;gap:6px"><span style="content:'';width:3px;height:12px;background:#3ecf8e;border-radius:2px;display:inline-block"></span>直近ニュース <span id="d-newscnt" style="font-size:11px;color:#9ca3af;font-weight:400"></span></span>
+          <button id="news-refresh-btn" onclick="fetchNews()" style="height:24px;padding:0 10px;border:1px solid #e5e7eb;border-radius:4px;background:#fff;font-size:11px;color:#374151;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:4px">🔄 更新</button>
+        </div>
+        <div id="d-newslist"><div style="font-size:12px;color:#9ca3af;padding:8px 0">「更新」を押すと最新ニュースを取得します</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var allData = [], filteredData = [], selectedId = null, currentPref = '全国';
+var statusFilters = [], industryFilters = [];
+var renderOffset = 0, PAGE = 100;
+
+function makeSample() {
+  var list = [
+    {lbc:'10089194780',name:'（有）平和技研',kana:'ユウゲンガイシャヘイワギジュツ',pref:'埼玉県',city:'川越市',industry:'運輸業、郵便業',industryMid:'倉庫業',industrySub:'冷蔵倉庫業',tel:'049-443-7245',fax:'049-863-8986',postal:'〒364-3547',capital:'1億円',employees:'37名（20〜50名）',founded:'1994年11月',offices:12,listed:'非上場',rep:'清水 洋',repTitle:'代表取締役社長',s2:2540000000,s1:2372000000,s0:2895000000,period:'2025/12',status:'未対応',owner:'山田 雄太',leads:0,mrr:null,url:'',hasNews:true},
+    {lbc:'10001234567',name:'（有）東洋プラスチック',kana:'ユウゲンガイシャトウヨウプラスチック',pref:'埼玉県',city:'さいたま市',industry:'製造業',industryMid:'プラスチック製品製造業',industrySub:'',tel:'048-777-1234',fax:'',postal:'',capital:'5000万円',employees:'28名',founded:'1988年4月',offices:3,listed:'非上場',rep:'田中 健一',repTitle:'代表取締役',s2:2500000000,s1:2680000000,s0:2825000000,period:'2025/6',status:'商談中',owner:'佐藤 花子',leads:3,mrr:50000,url:'',hasNews:false,deadline:'6月・あと3ヶ月'},
+    {lbc:'10002345678',name:'（株）東名技研',kana:'カブシキガイシャトウメイギケン',pref:'埼玉県',city:'川口市',industry:'製造業',industryMid:'金属製品製造業',industrySub:'',tel:'048-888-5678',fax:'',postal:'',capital:'3000万円',employees:'45名',founded:'1979年9月',offices:5,listed:'非上場',rep:'鈴木 次郎',repTitle:'代表取締役',s2:2450000000,s1:2590000000,s0:2670000000,period:'2025/2',status:'未対応',owner:'山田 雄太',leads:1,mrr:null,url:'',hasNews:false},
+    {lbc:'10003456789',name:'（株）栄光興業',kana:'カブシキガイシャエイコウコウギョウ',pref:'埼玉県',city:'所沢市',industry:'卸売業、小売業',industryMid:'建材卸売業',industrySub:'',tel:'04-2922-3456',fax:'',postal:'',capital:'2000万円',employees:'19名',founded:'1992年3月',offices:2,listed:'非上場',rep:'高橋 三郎',repTitle:'代表取締役',s2:2200000000,s1:2380000000,s0:2513000000,period:'2025/12',status:'未対応',owner:'田中 誠',leads:2,mrr:null,url:'',hasNews:false},
+    {lbc:'10004567890',name:'株式会社武蔵工業',kana:'カブシキガイシャムサシコウギョウ',pref:'埼玉県',city:'熊谷市',industry:'製造業',industryMid:'生産用機械器具製造業',industrySub:'',tel:'048-521-9012',fax:'',postal:'',capital:'8000万円',employees:'62名',founded:'1971年11月',offices:8,listed:'非上場',rep:'伊藤 四郎',repTitle:'代表取締役社長',s2:2100000000,s1:2250000000,s0:2377000000,period:'2025/1',status:'失注',owner:'鈴木 一郎',leads:4,mrr:null,url:'',hasNews:false},
+    {lbc:'10005678901',name:'（株）平和メタル',kana:'カブシキガイシャヘイワメタル',pref:'埼玉県',city:'越谷市',industry:'製造業',industryMid:'非鉄金属製造業',industrySub:'',tel:'048-963-2345',fax:'',postal:'',capital:'4500万円',employees:'38名',founded:'1983年7月',offices:4,listed:'非上場',rep:'渡辺 五郎',repTitle:'代表取締役',s2:2050000000,s1:2180000000,s0:2312000000,period:'2025/3',status:'未対応',owner:'佐藤 花子',leads:0,mrr:null,url:'',hasNews:false},
+    {lbc:'10006789012',name:'（株）互信システム',kana:'カブシキガイシャゴシンシステム',pref:'埼玉県',city:'春日部市',industry:'情報通信業',industryMid:'情報サービス業',industrySub:'',tel:'048-733-6789',fax:'',postal:'',capital:'1500万円',employees:'15名',founded:'2001年2月',offices:1,listed:'非上場',rep:'中村 六郎',repTitle:'代表取締役',s2:1800000000,s1:2050000000,s0:2282000000,period:'2025/12',status:'未対応',owner:'山田 雄太',leads:1,mrr:null,url:'https://example.com',hasNews:false},
+    {lbc:'10007890123',name:'（有）広域開発',kana:'ユウゲンガイシャコウイキカイハツ',pref:'埼玉県',city:'蕨市',industry:'不動産業、物品賃貸業',industryMid:'不動産業',industrySub:'',tel:'048-444-0123',fax:'',postal:'',capital:'2800万円',employees:'22名',founded:'1990年10月',offices:3,listed:'非上場',rep:'小林 七郎',repTitle:'取締役',s2:1900000000,s1:2100000000,s0:2254000000,period:'2025/6',status:'保留',owner:'田中 誠',leads:2,mrr:null,url:'',hasNews:false,deadline:'6月・あと1ヶ月'},
+    {lbc:'10008901234',name:'有限会社広城建工',kana:'ユウゲンガイシャヒロキケンコウ',pref:'埼玉県',city:'上尾市',industry:'建設業',industryMid:'職別工事業',industrySub:'',tel:'048-772-3456',fax:'',postal:'',capital:'1000万円',employees:'18名',founded:'1987年5月',offices:2,listed:'非上場',rep:'加藤 八郎',repTitle:'代表取締役',s2:1850000000,s1:1950000000,s0:2195000000,period:'2025/3',status:'未対応',owner:'鈴木 一郎',leads:0,mrr:null,url:'',hasNews:false},
+    {lbc:'10009012345',name:'（有）平和機工',kana:'カブシキガイシャヘイワキコウ',pref:'埼玉県',city:'桶川市',industry:'製造業',industryMid:'汎用機械器具製造業',industrySub:'',tel:'048-787-7890',fax:'',postal:'',capital:'3200万円',employees:'29名',founded:'1985年8月',offices:3,listed:'非上場',rep:'松本 九郎',repTitle:'代表取締役',s2:1800000000,s1:1900000000,s0:2189000000,period:'2025/3',status:'商談中',owner:'佐藤 花子',leads:5,mrr:80000,url:'',hasNews:false},
+    {lbc:'10010123456',name:'有限会社秀和フード',kana:'ユウゲンガイシャシュウワフード',pref:'東京都',city:'練馬区',industry:'宿泊業、飲食サービス業',industryMid:'飲食店',industrySub:'',tel:'03-5912-1234',fax:'',postal:'',capital:'800万円',employees:'35名',founded:'1998年4月',offices:6,listed:'非上場',rep:'井上 十郎',repTitle:'代表取締役',s2:1700000000,s1:1950000000,s0:2107000000,period:'2025/12',status:'未対応',owner:'山田 雄太',leads:0,mrr:null,url:'',hasNews:false},
+    {lbc:'10011234567',name:'株式会社大栄技術',kana:'カブシキガイシャダイエイギジュツ',pref:'東京都',city:'江戸川区',industry:'製造業',industryMid:'電子部品製造業',industrySub:'',tel:'03-3677-9012',fax:'',postal:'',capital:'5000万円',employees:'58名',founded:'1975年6月',offices:7,listed:'非上場',rep:'林 十二',repTitle:'代表取締役社長',s2:1900000000,s1:2000000000,s0:2110000000,period:'2025/3',status:'未対応',owner:'鈴木 一郎',leads:2,mrr:null,url:'',hasNews:false},
+    {lbc:'10013456789',name:'（株）旭製鋼',kana:'カブシキガイシャアサヒセイコウ',pref:'神奈川県',city:'川崎市',industry:'製造業',industryMid:'鉄鋼業',industrySub:'',tel:'044-444-7890',fax:'',postal:'',capital:'1億2000万円',employees:'95名',founded:'1962年9月',offices:12,listed:'非上場',rep:'山本 十四',repTitle:'代表取締役社長',s2:1600000000,s1:1800000000,s0:2087000000,period:'2025/3',status:'受注',owner:'山田 雄太',leads:3,mrr:120000,url:'',hasNews:false},
+    {lbc:'10015678901',name:'（有）大光コーポレーション',kana:'ユウゲンガイシャダイコウコーポレーション',pref:'千葉県',city:'千葉市',industry:'卸売業、小売業',industryMid:'機械器具卸売業',industrySub:'',tel:'043-222-1234',fax:'',postal:'',capital:'3500万円',employees:'31名',founded:'1991年7月',offices:4,listed:'非上場',rep:'中島 十五',repTitle:'代表取締役',s2:1550000000,s1:1720000000,s0:2003000000,period:'2025/9',status:'未対応',owner:'田中 誠',leads:1,mrr:null,url:'',hasNews:false},
+    {lbc:'10016789012',name:'税理士法人 鯨井会計',kana:'ゼイリシホウジンクジライカイケイ',pref:'埼玉県',city:'さいたま市',industry:'学術研究、専門・技術サービス業',industryMid:'専門サービス業',industrySub:'',tel:'048-650-3456',fax:'',postal:'',capital:'—',employees:'12名',founded:'2003年1月',offices:2,listed:'非上場',rep:'鯨井 良雄',repTitle:'所長',s2:0,s1:0,s0:0,period:'',status:'進行中（アップセル）',owner:'佐藤 花子',leads:1,mrr:20000,url:'https://kujira-tax.jp',hasNews:false},
+    {lbc:'10017890123',name:'株式会社三星エンジニアリング',kana:'カブシキガイシャミツボシエンジニアリング',pref:'大阪府',city:'大阪市',industry:'建設業',industryMid:'土木工事業',industrySub:'',tel:'06-6321-7890',fax:'',postal:'',capital:'6000万円',employees:'82名',founded:'1969年3月',offices:10,listed:'非上場',rep:'星野 光男',repTitle:'代表取締役社長',s2:1100000000,s1:1150000000,s0:1360000000,period:'2025/9',status:'未対応',owner:'田中 誠',leads:0,mrr:null,url:'',hasNews:false}
+  ];
+  return list.map(function(c) {
+    c.id = c.lbc;
+    c.salesNum = c.s0 || 0;
+    c.sales = [c.s2||0, c.s1||0, c.s0||0];
+    c.news = c.hasNews ? [
+      {title:'（有）平和技研 新製品の販売開始 海外展開も視野に - 日経産業',url:'#',date:'2026/04/22'},
+      {title:'（有）平和技研 基幹システム刷新により業務効率35%向上 - ITメディア',url:'#',date:'2026/05/10'},
+      {title:'（有）平和技研 取締役会で次期中期経営計画を承認 - PR TIMES',url:'#',date:'2026/04/29'}
+    ] : [];
+    return c;
+  });
+}
+
+function fmtS(v, range) {
+  if(v && v > 0) {
+    var oku;
+    if(v >= 1000000) {
+      oku = v / 100000000; // 円単位→億円
+    } else {
+      oku = v / 10000; // 万円単位→億円
+    }
+    if(oku >= 0.01) return oku.toFixed(2)+'億円';
+    return v.toLocaleString()+'円';
+  }
+  if(range && range !== '' && range !== 'undefined') return range;
+  return '—';
+}
+function fmtP(p) {
+  if(!p) return '—';
+  var m = String(p).match(/(\d{1,2})月?$/);
+  return m ? m[1]+'月' : String(p);
+}
+
+function initUI() {
+  buildPrefTabs();
+  buildStatusFilters();
+  buildIndustryFilters();
+  doFilter();
+}
+
+function buildPrefTabs() {
+  var seen = {}, prefs = ['全国'];
+  allData.forEach(function(d){ if(d.pref && !seen[d.pref]){ seen[d.pref]=true; prefs.push(d.pref); }});
+  document.getElementById('ptabs').innerHTML = prefs.slice(0,9).map(function(p){
+    var c = p==='全国' ? allData.length : allData.filter(function(d){return d.pref===p;}).length;
+    return '<div class="ptab'+(p===currentPref?' on':'')+'" onclick="setPref(\''+p+'\',this)">'+p+' <span class="n">'+c+'</span></div>';
+  }).join('');
+}
+
+function buildStatusFilters() {
+  var counts = {};
+  allData.forEach(function(d){ var s=d.status||'未対応'; counts[s]=(counts[s]||0)+1; });
+  var order = ['未対応','リード獲得','商談中','受注','失注','保留','未登録','進行中','進行中（アップセル）'];
+  var sel = document.getElementById('status-select');
+  var cur = sel.value;
+  sel.innerHTML = '<option value="">すべて</option>';
+  order.filter(function(s){return counts[s];}).forEach(function(s){
+    var opt = document.createElement('option');
+    opt.value = s; opt.textContent = s + '　' + counts[s] + '件';
+    if(s===cur) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function buildIndustryFilters() {
+  var counts = {};
+  allData.forEach(function(d){ if(d.industry) counts[d.industry]=(counts[d.industry]||0)+1; });
+  var sorted = Object.keys(counts).sort(function(a,b){return counts[b]-counts[a];});
+  var sel = document.getElementById('industry-select');
+  var cur = sel.value;
+  sel.innerHTML = '<option value="">すべて</option>';
+  sorted.forEach(function(ind){
+    var opt = document.createElement('option');
+    opt.value = ind; opt.textContent = ind + '　' + counts[ind] + '件';
+    if(ind===cur) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+
+function setPref(p,el){ currentPref=p; document.querySelectorAll('.ptab').forEach(function(t){t.classList.remove('on');}); el.classList.add('on'); doFilter(); }
+function setRange(mn,mx){ document.getElementById('smin').value=mn; document.getElementById('smax').value=mx; doFilter(); }
+
+function doFilter() {
+  var q = document.getElementById('si').value.toLowerCase();
+  var smn = parseFloat(document.getElementById('smin').value)||0;
+  var smx = parseFloat(document.getElementById('smax').value)||Infinity;
+  var t3m = document.getElementById('t-3m').checked;
+  var grow = document.getElementById('t-grow').checked;
+  var fmonth = parseInt(document.getElementById('f-month').value)||0;
+  var sv = document.querySelector('.sort-sel').value;
+
+  filteredData = allData.filter(function(d){
+    if(currentPref!=='全国' && d.pref!==currentPref) return false;
+    if(q && (d.name+d.kana+d.lbc+(d.rep||'')+d.city).toLowerCase().indexOf(q)<0) return false;
+    var selStatus = document.getElementById('status-select').value;
+    var selIndustry = document.getElementById('industry-select').value;
+    if(selStatus && (d.status||'未対応')!==selStatus) return false;
+    if(selIndustry && d.industry!==selIndustry) return false;
+    var sm = d.salesNum/10000; // 万円→億円
+    if(sm<smn||sm>smx) return false;
+    if(t3m && !d.deadline) return false;
+    if(grow && !(d.sales[2]>0 && d.sales[1]>0 && d.sales[2]>d.sales[1])) return false;
+    if(fmonth>0){ var pm=String(d.period).match(/(\d{1,2})月?$/); if(!pm||parseInt(pm[1])!==fmonth) return false; }
+    return true;
+  });
+
+  filteredData.sort(function(a,b){
+    if(sv==='sd') return b.salesNum-a.salesNum;
+    if(sv==='sa') return a.salesNum-b.salesNum;
+    if(sv==='na') return a.name.localeCompare(b.name,'ja');
+    return 0;
+  });
+
+  document.getElementById('fc').textContent = filteredData.length.toLocaleString();
+  document.getElementById('tc').textContent = allData.length.toLocaleString();
+  renderOffset = 0;
+  renderRows(true);
+}
+
+function renderRows(reset) {
+  var body = document.getElementById('lb');
+  if(reset) body.innerHTML = '';
+  if(filteredData.length===0 && reset){
+    body.innerHTML='<div class="empty"><div class="empty-ico">🔍</div><div class="empty-msg">条件に一致する企業が見つかりません</div></div>';
+    return;
+  }
+  var slice = filteredData.slice(renderOffset, renderOffset+PAGE);
+  for(var i=0; i<slice.length; i++){
+    var d = slice[i];
+    var pref = d.pref ? d.pref.replace(/[県都府道]/,'') : '';
+    var dlTag = d.deadline ? '<span class="dl-tag">📅 '+d.deadline+'</span>' : '';
+    var row = document.createElement('div');
+    row.className = 'row'+(d.id===selectedId?' sel':'');
+    row.dataset.id = d.id;
+    row.innerHTML =
+      '<div class="co-cell">'+
+        '<div class="cname">'+d.name+'</div>'+
+        '<div class="cmeta">'+(pref?'<span>'+pref+'</span>':'')+(d.city?'<span>'+d.city+'</span>':'')+dlTag+'</div>'+
+      '</div>'+
+      '<div class="tc" style="font-size:12px;color:#6b7280">'+fmtP(d.period)+'</div>'+
+      '<div class="tc sales-v">'+fmtS(d.salesNum,d.salesRange)+'</div>'+
+      '<div class="tc"><span class="sbadge s-'+(d.status||'未対応')+'">'+(d.status||'未対応')+'</span></div>';
+    row.addEventListener('click', function(ev){
+      selectRow(ev.currentTarget.dataset.id);
+    });
+    body.appendChild(row);
+  }
+  renderOffset += slice.length;
+  if(renderOffset < filteredData.length){
+    var sent = document.createElement('div'); sent.style.height='1px'; body.appendChild(sent);
+    var obs = new IntersectionObserver(function(entries){ if(entries[0].isIntersecting){obs.disconnect();sent.remove();renderRows(false);} });
+    obs.observe(sent);
+  }
+}
+
+function selectRow(id) {
+  id = String(id);
+  selectedId = id;
+  document.querySelectorAll('.row').forEach(function(r){ r.classList.toggle('sel', r.dataset.id===id); });
+  var d = null;
+  for(var i=0;i<allData.length;i++){ if(String(allData[i].id)===id||String(allData[i].lbc)===id){d=allData[i];break;} }
+  if(d) showDetail(d);
+}
+
+function showDetail(d) {
+  document.getElementById('dp').classList.remove('closed');
+  document.getElementById('d-sales-cards').style.display='none';
+  document.getElementById('d-chart').innerHTML='';
+  document.getElementById('d-lbc-sec').style.display='none';
+  document.getElementById('d-addr-sec').style.display='none';
+  document.getElementById('d-news-sec').style.display='none';
+
+  document.getElementById('d-lbc').textContent = d.lbc;
+  document.getElementById('d-name').textContent = d.name;
+  document.getElementById('d-kana').textContent = d.kana||'';
+
+  var tags = [];
+  if(d.listed) tags.push(d.listed);
+  if(d.industry) tags.push(d.industry);
+  if(d.pref||d.city) tags.push([(d.pref||'').replace(/[県都府道]/,''),d.city||''].filter(Boolean).join(' '));
+  if(d.founded) tags.push('創業 '+String(d.founded).replace(/^(\d{4}).*/,'$1')+'年');
+  document.getElementById('d-tags').innerHTML = tags.map(function(t){return'<span class="d-tag">'+t+'</span>';}).join('');
+
+  var s = d.sales||[0,0,0];
+  var hasS = s[0]>0||s[1]>0||s[2]>0;
+  // 売上レンジがあれば売上カードに表示
+  if(!hasS && d.salesRange) {
+    document.getElementById('d-sales-cards').style.display='grid';
+    document.getElementById('d-s2').textContent='—';
+    document.getElementById('d-s1').textContent='—';
+    document.getElementById('d-s0').textContent=d.salesRange;
+    document.getElementById('d-period-lbl').textContent='売上規模';
+    document.getElementById('d-y0').innerHTML='';
+    document.getElementById('d-y1').innerHTML='';
+  }
+  if(hasS){
+    document.getElementById('d-sales-cards').style.display='grid';
+    document.getElementById('d-s2').textContent=fmtS(s[0],'');
+    document.getElementById('d-s1').textContent=fmtS(s[1],'');
+    document.getElementById('d-s0').textContent=fmtS(s[2],d.salesRange);
+    document.getElementById('d-period-lbl').textContent=d.period?d.period+'決算':'当期売上';
+    function yoy(c,p){ if(!c||!p)return''; var pct=((c-p)/p*100).toFixed(1); return '<span class="'+(pct>=0?'yoy-up':'yoy-dn')+'">'+(pct>=0?'▲':'▼')+Math.abs(pct)+'% YoY</span>'; }
+    document.getElementById('d-y1').innerHTML=yoy(s[1],s[0]);
+    document.getElementById('d-y0').innerHTML=yoy(s[2],s[1]);
+    var mx=Math.max(s[0],s[1],s[2],1);
+    var h=function(v){return Math.max(4,Math.round(v/mx*44));};
+    document.getElementById('d-chart').innerHTML='<div style="display:flex;gap:6px;align-items:flex-end;height:48px;padding-top:8px">'+
+      (s[0]>0?'<div style="flex:1;height:'+h(s[0])+'px;background:#e5e7eb;border-radius:2px 2px 0 0"></div>':'')+
+      (s[1]>0?'<div style="flex:1;height:'+h(s[1])+'px;background:#c3e9d8;border-radius:2px 2px 0 0"></div>':'')+
+      (s[2]>0?'<div style="flex:1;height:'+h(s[2])+'px;background:#3ecf8e;border-radius:2px 2px 0 0"></div>':'')+
+      '</div>';
+  }
+
+  var lbcF=[
+    ['社名', d.name||''],
+    ['LBC', d.lbc||''],
+    ['上場区分', d.listed||''],
+    ['業種大分類', d.industry||''],
+    ['業種中分類', d.industryMid||''],
+    ['代表者', (d.repTitle?d.repTitle+' ':'')+( d.rep||'')],
+    ['資本金', d.capital||''],
+    ['従業員数', d.employees||''],
+    ['社名カナ', d.kana||'']
+  ].filter(function(f){return f[1];});
+  if(lbcF.length){ document.getElementById('d-lbc-sec').style.display=''; document.getElementById('d-lbc-grid').innerHTML=lbcF.map(function(f){return'<div class="info-item"><div class="il">'+f[0]+'</div><div class="iv">'+f[1]+'</div></div>';}).join(''); }
+
+  var fullAddr = [d.pref||'', d.city||'', d.street||''].filter(Boolean).join('');
+  var addrF=[['郵便番号',d.postal||''],['住所',fullAddr||''],['電話番号',d.tel||''],['FAX',d.fax||''],['URL',d.url?'<a href="'+d.url+'" target="_blank">'+d.url+'</a>':'']].filter(function(f){return f[1];});
+  if(addrF.length){ document.getElementById('d-addr-sec').style.display=''; document.getElementById('d-addr-grid').innerHTML=addrF.map(function(f){return'<div class="info-item"><div class="il">'+f[0]+'</div><div class="iv">'+f[1]+'</div></div>';}).join(''); }
+
+  document.getElementById('d-cst').textContent=d.status||'—';
+  document.getElementById('d-cow').textContent=d.owner||'—';
+  document.getElementById('d-cld').textContent=d.leads!=null?String(d.leads):'—';
+  document.getElementById('d-mrr').textContent=d.mrr?'¥'+Number(d.mrr).toLocaleString():'—';
+
+  if(d.news&&d.news.length>0){
+    document.getElementById('d-news-sec').style.display='';
+    document.getElementById('d-newscnt').textContent=d.news.length+'件';
+    document.getElementById('d-newslist').innerHTML=d.news.map(function(n){return'<div class="news-item"><div class="news-ttl"><a href="'+n.url+'" target="_blank">'+n.title+'</a></div><span class="news-dt">'+n.date+'</span></div>';}).join('');
+  }
+}
+
+function closeDetail(){ document.getElementById('dp').classList.add('closed'); selectedId=null; document.querySelectorAll('.row').forEach(function(r){r.classList.remove('sel');}); }
+
+function fetchNews() {
+  if(!selectedId) return;
+  var d = null;
+  for(var i=0;i<allData.length;i++){ if(String(allData[i].id)===selectedId){d=allData[i];break;} }
+  if(!d) return;
+  var btn = document.getElementById('news-refresh-btn');
+  btn.textContent = '⏳ 取得中...';
+  btn.disabled = true;
+  var query = encodeURIComponent(d.name + ' ニュース');
+  var rssUrl = 'https://news.google.com/rss/search?q=' + query + '&hl=ja&gl=JP&ceid=JP:ja';
+  var proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(rssUrl);
+  fetch(proxyUrl)
+    .then(function(r){ return r.json(); })
+    .then(function(res){
+      var parser = new DOMParser();
+      var xml = parser.parseFromString(res.contents, 'text/xml');
+      var items = xml.querySelectorAll('item');
+      var newsEl = document.getElementById('d-newslist');
+      var cntEl = document.getElementById('d-newscnt');
+      if(items.length === 0){
+        newsEl.innerHTML = '<div style="font-size:12px;color:#9ca3af;padding:8px 0">ニュースが見つかりませんでした</div>';
+        cntEl.textContent = '';
+      } else {
+        var html = '';
+        var count = 0;
+        items.forEach(function(item){
+          if(count >= 6) return;
+          var title = item.querySelector('title') ? item.querySelector('title').textContent : '';
+          var link = item.querySelector('link') ? item.querySelector('link').textContent : '#';
+          var pubDate = item.querySelector('pubDate') ? item.querySelector('pubDate').textContent : '';
+          var date = pubDate ? new Date(pubDate).toLocaleDateString('ja-JP') : '';
+          // 会社名が含まれるものを優先
+          // Google NewsのリンクはRSSから直接取得できない場合があるためGoogle検索にフォールバック
+          var displayLink = link && link.indexOf('http')===0 ? link : 'https://www.google.com/search?q='+encodeURIComponent(title);
+          html += '<div class="news-item"><div class="news-ttl"><a href="'+displayLink+'" target="_blank" rel="noopener">'+title+'</a></div><span class="news-dt">'+date+'</span></div>';
+          count++;
+        });
+        newsEl.innerHTML = html;
+        cntEl.textContent = count + '件';
+      }
+      btn.textContent = '🔄 更新';
+      btn.disabled = false;
+    })
+    .catch(function(e){
+      document.getElementById('d-newslist').innerHTML = '<div style="font-size:12px;color:#dc2626;padding:8px 0">取得に失敗しました。ネットワークを確認してください。</div>';
+      btn.textContent = '🔄 更新';
+      btn.disabled = false;
+    });
+}
+function copyLbc(){ navigator.clipboard.writeText(document.getElementById('d-lbc').textContent).then(function(){var b=document.querySelector('.d-copy');b.textContent='✅';setTimeout(function(){b.textContent='📋';},1500);}); }
+
+var yusonaFiles = [];   // ユーソナーのWBリスト（複数対応）
+var yusonaData = null;  // 後方互換
+var sfFiles = [];       // SFのWBリスト（複数対応）
+var sfData = null;      // 後方互換
+var pendingData = null; // 後方互換
+
+function readWBRows(file, callback) {
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      console.log('readWBRows: ファイル読込完了', file.name, 'サイズ=', ev.target.result.length);
+      var wb = XLSX.read(ev.target.result, {type:'binary'});
+      console.log('readWBRows: XLSX解析完了 シート数=', wb.SheetNames.length, wb.SheetNames);
+      callback(null, wb);
+    } catch(e) {
+      console.error('readWBRows: エラー', e);
+      callback(e);
+    }
+  };
+  reader.onerror = function(e) { console.error('FileReader エラー', e); callback(e); };
+  reader.readAsBinaryString(file);
+}
+
+function onUploadYusona(e) {
+  var files = Array.from(e.target.files);
+  if(!files.length) return;
+  var btn = document.getElementById('btn-yu');
+  var countEl = document.getElementById('yu-count');
+  btn.style.background = '#d97706';
+  countEl.textContent = '';
+
+  var loaded = 0;
+  files.forEach(function(file) {
+    readWBRows(file, function(err, wb) {
+      if(!err) {
+        yusonaFiles.push({name: file.name, wb: wb});
+        yusonaData = wb; // 後方互換
+      }
+      loaded++;
+      countEl.textContent = '(' + loaded + '/' + files.length + ')';
+      if(loaded === files.length) {
+        btn.style.background = '#059669';
+        countEl.textContent = '✅ ' + yusonaFiles.length + '件';
+        updateImportBar();
+      }
+    });
+  });
+  e.target.value = '';
+}
+
+function onUploadSF(e) {
+  var files = Array.from(e.target.files);
+  if(!files.length) return;
+  var btn = document.getElementById('btn-sf');
+  var countEl = document.getElementById('sf-count');
+  btn.style.background = '#d97706';
+  countEl.textContent = '';
+
+  var loaded = 0;
+  files.forEach(function(file) {
+    readWBRows(file, function(err, wb) {
+      if(!err) {
+        sfFiles.push({name: file.name, wb: wb});
+        sfData = wb; // 後方互換
+      }
+      loaded++;
+      countEl.textContent = '(' + loaded + '/' + files.length + ')';
+      if(loaded === files.length) {
+        btn.style.background = '#059669';
+        countEl.textContent = '✅ ' + sfFiles.length + '件';
+        updateImportBar();
+      }
+    });
+  });
+  e.target.value = '';
+}
+
+function updateImportBar() {
+  var bar = document.getElementById('import-bar');
+  var msg = document.getElementById('import-msg');
+  var btnMerge = document.getElementById('btn-merge');
+  bar.style.display = 'flex';
+  bar.style.alignItems = 'center';
+  if(yusonaFiles.length > 0 && sfFiles.length > 0) {
+    msg.textContent = '✅ ユーソナー' + yusonaFiles.length + 'ファイル ＋ Salesforce' + sfFiles.length + 'ファイル 読み込み完了。';
+    btnMerge.style.display = '';
+  } else if(yusonaFiles.length > 0 && sfFiles.length === 0) {
+    msg.textContent = '📊 ユーソナー' + yusonaFiles.length + 'ファイル済み。次にSalesforceを選択してください。';
+    btnMerge.style.display = 'none';
+  } else if(sfFiles.length > 0 && yusonaFiles.length === 0) {
+    msg.textContent = '🔗 Salesforce' + sfFiles.length + 'ファイル済み。次にユーソナーを選択してください。';
+    btnMerge.style.display = 'none';
+  }
+}
+
+function mergeAndDisplay() {
+  if(yusonaFiles.length === 0 && !sfData) return;
+  var bn = document.getElementById('banner');
+  bn.textContent = '⏳ 結合中...'; bn.style.color = '#2563eb';
+  setTimeout(function() {
+    try {
+      var allResults = [];
+      var seenLBC = {};
+
+      // SFデータを先にMapに変換（一度だけ）
+      // 複数SFファイルのMapを結合
+      var sfMap = {};
+      var sfSrcs = sfFiles.length > 0 ? sfFiles.map(function(f){return f.wb;}) : (sfData ? [sfData] : []);
+      sfSrcs.forEach(function(wb) {
+        var m = buildSFMap(wb);
+        Object.keys(m).forEach(function(k){ if(!sfMap[k]) sfMap[k]=m[k]; });
+      });
+      console.log('SF件数（buildSFMap）:', Object.keys(sfMap).length);
+
+      // ユーソナーファイルを順番に処理
+      for(var fi=0; fi<yusonaFiles.length; fi++) {
+        var partial = parseYusona(yusonaFiles[fi].wb, sfMap);
+        console.log('ユーソナーファイル' + (fi+1) + '件数:', partial.length);
+        partial.forEach(function(d) {
+          if(!seenLBC[d.lbc]) { seenLBC[d.lbc]=true; allResults.push(d); }
+        });
+      }
+      var result = allResults;
+      if(result.length === 0) {
+        bn.textContent = '⚠ データが見つかりませんでした。'; bn.style.color = '#dc2626'; return;
+      }
+      allData = result;
+      bn.textContent = '✅ ' + allData.length.toLocaleString() + '件を結合しました。右上の「💾 データを保存」→ 都道府県別ファイルをGitHubにアップしてください';
+      bn.style.color = '#059669';
+      document.getElementById('import-bar').style.display = 'none';
+      var saveBtn = document.getElementById('save-btn');
+      saveBtn.style.display = 'flex';
+      selectedId = null;
+      document.getElementById('dp').classList.add('closed');
+      statusFilters = []; industryFilters = [];
+      initUI();
+    } catch(err) {
+      bn.textContent = '⚠ エラー: ' + err.message; bn.style.color = '#dc2626';
+    }
+  }, 50);
+}
+
+function cancelImport() {
+  yusonaFiles = []; sfFiles = []; yusonaData = null; sfData = null; pendingData = null;
+  document.getElementById('import-bar').style.display = 'none';
+  var btnYu = document.getElementById('btn-yu');
+  btnYu.innerHTML = '📊 ユーソナー <span id="yu-count"></span>';
+  btnYu.style.background = '#3ecf8e';
+  var btnSf = document.getElementById('btn-sf');
+  btnSf.innerHTML = '🔗 Salesforce <span id="sf-count"></span>';
+  btnSf.style.background = '#1e293b';
+}
+
+// 後方互換（旧onFileUpload）
+function onFileUpload(e) { onUploadYusona(e); }
+function confirmImport(mode) { mergeAndDisplay(); }
+
+// SFデータをMapに変換（単独関数）
+function buildSFMap(sfWB) {
+  var sfMap = {};
+  if(!sfWB) { console.log('buildSFMap: sfWBがnull'); return sfMap; }
+  console.log('buildSFMap: シート一覧=', sfWB.SheetNames);
+
+  function normLBC(v){
+    if(v===null||v===undefined||v==='') return '';
+    var n=parseFloat(String(v).replace(/,/g,'').trim());
+    return (!isNaN(n)&&n>0)?String(Math.round(n)):String(v).trim().replace(/\.0+$/,'');
+  }
+
+  // SFシートを探す（見つからなければ最初のシートを使用）
+  var sfSN = sfWB.SheetNames[0]; // デフォルトは最初のシート
+  sfWB.SheetNames.forEach(function(n){
+    if(n.indexOf('salesforce B')>=0||n.indexOf('Salesforce B')>=0||
+       n.indexOf('セールスフォース')>=0||n.indexOf('クラウドサイン')>=0||
+       n.indexOf('取引先')>=0) sfSN=n;
+  });
+  console.log('SF使用シート:', sfSN);
+
+  var srows = XLSX.utils.sheet_to_json(sfWB.Sheets[sfSN],{header:1,defval:''});
+  console.log('SF行数:', srows.length, '1行目:', srows[0] ? srows[0].slice(0,5) : 'なし');
+  var shr=0;
+  for(var i=0;i<Math.min(5,srows.length);i++){
+    if(srows[i].some(function(v){
+      var s=String(v).trim();
+      return s==='（LBC）LBC'||s==='LBC'||s.indexOf('LBC')>=0;
+    })){shr=i;break;}
+  }
+  console.log('SFヘッダー行:', shr, 'ヘッダー:', srows[shr] ? srows[shr].slice(0,5) : 'なし');
+  var SH=srows[shr].map(function(h){return String(h).trim();});
+  var sx=function(ns){for(var k=0;k<ns.length;k++){for(var j=0;j<SH.length;j++){if(SH[j]===ns[k])return j;}}return -1;};
+  var siL=sx(['（LBC）LBC','LBC']),siSt=sx(['商談状況']),siO=sx(['取引先 所有者']),
+      siLd=sx(['リード/取引先責任者の登録数']),siMR=sx(['MRR（Usage込）','MRR']),
+      siSR=sx(['（LBC）売上高詳細レンジ名称','売上高詳細レンジ名称']),
+      siSV=sx(['（LBC）当期売上高_数値変換','当期売上高_数値変換']),
+      siNG=sx(['顧客連絡NG']);
+
+  for(var r=shr+1;r<srows.length;r++){
+    var row=srows[r];
+    var lbc=siL>=0?normLBC(row[siL]):'';
+    if(!lbc||lbc==='0') continue;
+    sfMap[lbc]={
+      status: siSt>=0?String(row[siSt]||'未対応'):'未対応',
+      owner:  siO>=0?String(row[siO]||''):'',
+      leads:  siLd>=0?parseInt(row[siLd])||0:0,
+      mrr:    siMR>=0?parseFloat(row[siMR])||null:null,
+      salesRange:siSR>=0?String(row[siSR]||''):'',
+      salesNum:siSV>=0?parseFloat(row[siSV])||0:0,
+      ng:     siNG>=0?!!(row[siNG]):false
+    };
+  }
+  console.log('SF件数:', Object.keys(sfMap).length);
+  return sfMap;
+}
+
+// ユーソナー1ファイルを解析してSFとマージ
+function parseYusona(yuWB, sfMap) {
+  if(!yuWB) { console.log('parseYusona: yuWBがnull'); return []; }
+  console.log('parseYusona: シート一覧=', yuWB.SheetNames);
+
+  function normLBC(v){
+    if(v===null||v===undefined||v==='') return '';
+    var n=parseFloat(String(v).replace(/,/g,'').trim());
+    return (!isNaN(n)&&n>0)?String(Math.round(n)):String(v).trim().replace(/\.0+$/,'');
+  }
+
+  // ユーソナーシートを探す
+  var yuSN = null;
+  // 優先順位：「データ」→「マージデータ」→「ユーソナー」含む→最初のシート
+  yuWB.SheetNames.forEach(function(n){ if(n==='データ') yuSN=n; });
+  if(!yuSN) yuWB.SheetNames.forEach(function(n){
+    if(n.indexOf('マージデータ')>=0) yuSN=n;
+  });
+  if(!yuSN) yuWB.SheetNames.forEach(function(n){
+    if(n.indexOf('ユーソナー')>=0) yuSN=n;
+  });
+  if(!yuSN) yuSN = yuWB.SheetNames[0];
+  console.log('ユーソナー使用シート:', yuSN);
+
+  var mrows = XLSX.utils.sheet_to_json(yuWB.Sheets[yuSN],{header:1,defval:''});
+  console.log('ユーソナー行数:', mrows.length);
+
+  if(mrows.length<2) return [];
+
+  var mhr=0;
+  for(var i=0;i<Math.min(5,mrows.length);i++){
+    if(mrows[i].some(function(v){var s=String(v).trim();return s==='LBC'||s==='社名';})){mhr=i;break;}
+  }
+
+  var MH=mrows[mhr].map(function(h){return String(h).trim();});
+  var mx=function(ns){
+    for(var k=0;k<ns.length;k++){for(var j=0;j<MH.length;j++){if(MH[j]===ns[k])return j;}}
+    for(var k=0;k<ns.length;k++){for(var j=0;j<MH.length;j++){if(MH[j].indexOf(ns[k])>=0)return j;}}
+    return -1;
+  };
+
+  var mL=mx(['LBC']),mN=mx(['社名','取引先名']),mKa=mx(['社名カナ']),
+      mPo=mx(['郵便番号']),mPf=mx(['都道府県名']),mCi=mx(['市区郡町村名']),
+      mTw=mx(['町大字通称名']),mJo=mx(['字丁目']),mBn=mx(['番地番号']),mBl=mx(['建物名部屋番号']),
+      mT=mx(['電話番号']),mFx=mx(['FAX番号']),mU=mx(['URL']),
+      mRp=mx(['代表者名']),mRT=mx(['代表者役職']),
+      mCa=mx(['資本金']),mEm=mx(['従業員数詳細レンジ名称']),
+      mFn=mx(['設立年(月)']),mOf=mx(['事業所数']),mLs=mx(['上場区分名称']),
+      mIn=mx(['業種大分類名称1']),mIM=mx(['業種中分類名称1']),mIS=mx(['業種小分類名称1']),
+      mPe=mx(['当期決算年月']),
+      mS0=mx(['当期売上高']),mS1=mx(['前期売上高']),mS2=mx(['前々期売上高']),
+      mSR=mx(['売上高詳細レンジ名称']);
+
+  var res=[], seen={};
+  for(var r=mhr+1;r<mrows.length;r++){
+    var row=mrows[r];
+    var lbc=mL>=0?normLBC(row[mL]):'';
+    if(!lbc||lbc==='0'||seen[lbc]) continue;
+    var nm=String(mN>=0?row[mN]:'').trim();
+    if(!nm) continue;
+    seen[lbc]=true;
+
+    var street=[
+      mTw>=0?String(row[mTw]||''):'',
+      mJo>=0?String(row[mJo]||''):'',
+      mBn>=0?String(row[mBn]||''):'',
+      mBl>=0?String(row[mBl]||''):''
+    ].filter(Boolean).join('');
+
+    var rawPo=mPo>=0?row[mPo]:'';
+    var poNum=parseFloat(rawPo);
+    var poStr='';
+    if(!isNaN(poNum)&&poNum>0){
+      var ps=String(Math.round(poNum)).padStart(7,'0');
+      poStr='〒'+ps.slice(0,3)+'-'+ps.slice(3);
+    } else if(rawPo) poStr=String(rawPo);
+
+    var rawFn=mFn>=0?row[mFn]:'';
+    var fnNum=parseFloat(rawFn);
+    var fnStr='';
+    if(!isNaN(fnNum)&&fnNum>0){
+      var fy=String(Math.round(fnNum));
+      fnStr=fy.length===6?fy.slice(0,4)+'年'+parseInt(fy.slice(4))+'月':fy+'年';
+    }
+
+    var rawCa=mCa>=0?parseFloat(row[mCa])||0:0;
+    var caStr=rawCa>0?Math.round(rawCa).toLocaleString()+'万円':'';
+
+    var s0=mS0>=0?parseFloat(row[mS0])||0:0;
+    var s1=mS1>=0?parseFloat(row[mS1])||0:0;
+    var s2=mS2>=0?parseFloat(row[mS2])||0:0;
+
+    var sf=sfMap[lbc]||{};
+
+    res.push({
+      id:lbc,lbc:lbc,name:nm,
+      kana:mKa>=0?String(row[mKa]||''):'',
+      postal:poStr,
+      pref:mPf>=0?String(row[mPf]||''):'',
+      city:mCi>=0?String(row[mCi]||''):'',
+      street:street,
+      tel:mT>=0?String(row[mT]||''):'',
+      fax:mFx>=0?String(row[mFx]||''):'',
+      url:mU>=0?String(row[mU]||''):'',
+      rep:mRp>=0?String(row[mRp]||''):'',
+      repTitle:mRT>=0?String(row[mRT]||''):'',
+      capital:caStr,
+      employees:mEm>=0?String(row[mEm]||''):'',
+      founded:fnStr,
+      offices:mOf>=0?parseInt(row[mOf])||0:0,
+      listed:mLs>=0?String(row[mLs]||''):'',
+      industry:mIn>=0?String(row[mIn]||''):'',
+      industryMid:mIM>=0?String(row[mIM]||''):'',
+      industrySub:mIS>=0?String(row[mIS]||''):'',
+      period:mPe>=0?String(row[mPe]||''):'',
+      sales:[s2,s1,s0],
+      salesNum:sf.salesNum||s0,
+      salesRange:sf.salesRange||(mSR>=0?String(row[mSR]||''):''),
+      deadline:null,
+      status:sf.status||'未対応',
+      owner:sf.owner||'',
+      leads:sf.leads||0,
+      mrr:sf.mrr||null,
+      ng:sf.ng||false,
+      news:[]
+    });
+  }
+  return res;
+}
+
+function parseWB(yuWB, sfWB) {
+  // LBC正規化
+  function normLBC(v){
+    if(v===null||v===undefined||v==='') return '';
+    var s = String(v).replace(/,/g,'').trim();
+    var n = parseFloat(s);
+    return (!isNaN(n) && n > 0) ? String(Math.round(n)) : s.replace(/\.0+$/,'');
+  }
+
+  // ── SFデータをMapに ──
+  var sfMap = {};
+  var sfWBsrc = sfWB || yuWB; // SFがなければユーソナーのSFシートを使う
+  if(sfWBsrc) {
+    // SFシートを探す
+    var sfSN = null;
+    sfWBsrc.SheetNames.forEach(function(n){
+      if(n.indexOf('salesforce B')>=0||n.indexOf('Salesforce B')>=0||n.indexOf('セールスフォース')>=0||n.indexOf('クラウドサイン')>=0) sfSN=n;
+    });
+    // SFファイルはシートが1枚だけのことも
+    if(!sfSN && sfWB) sfSN = sfWBsrc.SheetNames[0];
+    if(sfSN){
+      var srows = XLSX.utils.sheet_to_json(sfWBsrc.Sheets[sfSN],{header:1,defval:''});
+      var shr=0;
+      for(var i=0;i<Math.min(3,srows.length);i++){
+        if(srows[i].some(function(v){var s=String(v).trim();return s==='（LBC）LBC'||s==='LBC';})){shr=i;break;}
+      }
+      var SH=srows[shr].map(function(h){return String(h).trim();});
+      var sx=function(ns){
+        for(var k=0;k<ns.length;k++){for(var j=0;j<SH.length;j++){if(SH[j]===ns[k])return j;}}
+        return -1;
+      };
+      var siL=sx(['（LBC）LBC','LBC']),siSt=sx(['商談状況']),siO=sx(['取引先 所有者']),
+          siLd=sx(['リード/取引先責任者の登録数']),siMR=sx(['MRR（Usage込）','MRR']),
+          siSR=sx(['（LBC）売上高詳細レンジ名称','売上高詳細レンジ名称']),
+          siSV=sx(['（LBC）当期売上高_数値変換','当期売上高_数値変換']),
+          siNG=sx(['顧客連絡NG']);
+      for(var r=shr+1;r<srows.length;r++){
+        var row=srows[r];
+        var lbc=siL>=0?normLBC(row[siL]):'';
+        if(!lbc||lbc==='0') continue;
+        sfMap[lbc]={
+          status:  siSt>=0?String(row[siSt]||'未対応'):'未対応',
+          owner:   siO>=0?String(row[siO]||''):'',
+          leads:   siLd>=0?parseInt(row[siLd])||0:0,
+          mrr:     siMR>=0?parseFloat(row[siMR])||null:null,
+          salesRange:siSR>=0?String(row[siSR]||''):'',
+          salesNum:siSV>=0?parseFloat(row[siSV])||0:0,
+          ng:      siNG>=0?!!(row[siNG]):false
+        };
+      }
+      console.log('SF件数:', Object.keys(sfMap).length);
+    }
+  }
+
+  // ── ユーソナーデータをメインとして読む ──
+  var yuSrc = yuWB || sfWB;
+  if(!yuSrc) return [];
+
+  // ユーソナーシートを探す（「データ」シートが優先）
+  var yuSN = null;
+  yuSrc.SheetNames.forEach(function(n){
+    if(n==='データ') yuSN=n;
+  });
+  if(!yuSN){
+    yuSrc.SheetNames.forEach(function(n){
+      if(n.indexOf('マージデータ')>=0) yuSN=n;
+      else if(n.indexOf('ユーソナー')>=0) yuSN=n;
+    });
+  }
+  if(!yuSN) yuSN = yuSrc.SheetNames[0];
+
+  var mrows = XLSX.utils.sheet_to_json(yuSrc.Sheets[yuSN],{header:1,defval:''});
+  if(mrows.length<2) return [];
+
+  // ヘッダー行を探す
+  var mhr=0;
+  for(var i=0;i<Math.min(5,mrows.length);i++){
+    if(mrows[i].some(function(v){var s=String(v).trim();return s==='LBC'||s==='社名';})){mhr=i;break;}
+  }
+
+  var MH=mrows[mhr].map(function(h){return String(h).trim();});
+  var mx=function(ns){
+    for(var k=0;k<ns.length;k++){for(var j=0;j<MH.length;j++){if(MH[j]===ns[k])return j;}}
+    for(var k=0;k<ns.length;k++){for(var j=0;j<MH.length;j++){if(MH[j].indexOf(ns[k])>=0)return j;}}
+    return -1;
+  };
+
+  var mL=mx(['LBC']), mN=mx(['社名','取引先名']), mKa=mx(['社名カナ']),
+      mPo=mx(['郵便番号']), mPf=mx(['都道府県名']), mCi=mx(['市区郡町村名']),
+      mTw=mx(['町大字通称名']), mJo=mx(['字丁目']), mBn=mx(['番地番号']), mBl=mx(['建物名部屋番号']),
+      mT=mx(['電話番号']), mFx=mx(['FAX番号']), mU=mx(['URL']),
+      mRp=mx(['代表者名']), mRT=mx(['代表者役職']),
+      mCa=mx(['資本金']), mEm=mx(['従業員数詳細レンジ名称']),
+      mFn=mx(['設立年(月)']), mOf=mx(['事業所数']), mLs=mx(['上場区分名称']),
+      mIn=mx(['業種大分類名称1']), mIM=mx(['業種中分類名称1']), mIS=mx(['業種小分類名称1']),
+      mPe=mx(['当期決算年月']),
+      mS0=mx(['当期売上高']), mS1=mx(['前期売上高']), mS2=mx(['前々期売上高']),
+      mSR=mx(['売上高詳細レンジ名称']);
+
+  var res=[], seen={};
+  for(var r=mhr+1;r<mrows.length;r++){
+    var row=mrows[r];
+    var lbc=mL>=0?normLBC(row[mL]):'';
+    if(!lbc||lbc==='0'||seen[lbc]) continue;
+    var nm=String(mN>=0?row[mN]:'').trim();
+    if(!nm) continue;
+    seen[lbc]=true;
+
+    // 住所組み立て
+    var tw=mTw>=0?String(row[mTw]||''):'';
+    var jo=mJo>=0?String(row[mJo]||''):'';
+    var bn=mBn>=0?String(row[mBn]||''):'';
+    var bl=mBl>=0?String(row[mBl]||''):'';
+    var street=[tw,jo,bn,bl].filter(Boolean).join('');
+
+    // 郵便番号フォーマット
+    var rawPo=mPo>=0?row[mPo]:'';
+    var poNum=parseFloat(rawPo);
+    var poStr='';
+    if(!isNaN(poNum)&&poNum>0){
+      var ps=String(Math.round(poNum)).padStart(7,'0');
+      poStr='〒'+ps.slice(0,3)+'-'+ps.slice(3);
+    } else if(rawPo) poStr=String(rawPo);
+
+    // 設立年月フォーマット
+    var rawFn=mFn>=0?row[mFn]:'';
+    var fnNum=parseFloat(rawFn);
+    var fnStr='';
+    if(!isNaN(fnNum)&&fnNum>0){
+      var fy=String(Math.round(fnNum));
+      fnStr=fy.length===6?fy.slice(0,4)+'年'+parseInt(fy.slice(4))+'月':fy+'年';
+    }
+
+    // 資本金（万円単位）
+    var rawCa=mCa>=0?parseFloat(row[mCa])||0:0;
+    var caStr=rawCa>0?Math.round(rawCa).toLocaleString()+'万円':'';
+
+    // 売上（万円単位）
+    var s0=mS0>=0?parseFloat(row[mS0])||0:0;
+    var s1=mS1>=0?parseFloat(row[mS1])||0:0;
+    var s2=mS2>=0?parseFloat(row[mS2])||0:0;
+
+    // SFデータをマージ
+    var sf=sfMap[lbc]||{};
+
+    res.push({
+      id:lbc, lbc:lbc,
+      name:nm, kana:mKa>=0?String(row[mKa]||''):'',
+      postal:poStr,
+      pref:mPf>=0?String(row[mPf]||''):'',
+      city:mCi>=0?String(row[mCi]||''):'',
+      street:street,
+      tel:mT>=0?String(row[mT]||''):'',
+      fax:mFx>=0?String(row[mFx]||''):'',
+      url:mU>=0?String(row[mU]||''):'',
+      rep:mRp>=0?String(row[mRp]||''):'',
+      repTitle:mRT>=0?String(row[mRT]||''):'',
+      capital:caStr,
+      employees:mEm>=0?String(row[mEm]||''):'',
+      founded:fnStr,
+      offices:mOf>=0?parseInt(row[mOf])||0:0,
+      listed:mLs>=0?String(row[mLs]||''):'',
+      industry:mIn>=0?String(row[mIn]||''):'',
+      industryMid:mIM>=0?String(row[mIM]||''):'',
+      industrySub:mIS>=0?String(row[mIS]||''):'',
+      period:mPe>=0?String(row[mPe]||''):'',
+      sales:[s2,s1,s0],
+      salesNum:sf.salesNum||s0,
+      salesRange:sf.salesRange||(mSR>=0?String(row[mSR]||''):''),
+      deadline:null,
+      status:sf.status||'未対応',
+      owner:sf.owner||'',
+      leads:sf.leads||0,
+      mrr:sf.mrr||null,
+      ng:sf.ng||false,
+      news:[]
+    });
+  }
+
+  console.log('ユーソナー件数:', res.length, '/ SF結合件数:', res.filter(function(d){return d.owner;}).length);
+  return res;
+}
+
+function saveJSON() {
+  var btn = document.getElementById('save-btn');
+  btn.textContent = '⏳ 生成中...';
+  btn.disabled = true;
+
+  setTimeout(function() {
+    try {
+      // 都道府県ごとに分割
+      var byPref = {};
+      allData.forEach(function(d) {
+        var pref = d.pref || '不明';
+        if(!byPref[pref]) byPref[pref] = [];
+        // 空値を除去して圧縮
+        var rec = {};
+        var map = {
+          i:d.id, n:d.name, k:d.kana,
+          pf:d.pref, ci:d.city, st:d.street, po:d.postal,
+          t:d.tel, fx:d.fax, u:d.url,
+          r:d.rep, rt:d.repTitle,
+          ca:d.capital, em:d.employees, fn:d.founded,
+          of:d.offices, li:d.listed,
+          in:d.industry, im:d.industryMid, is:d.industrySub,
+          pe:d.period, s0:d.salesNum, s1:d.sales[1]||0, s2:d.sales[0]||0,
+          sr:d.salesRange, dl:d.deadline,
+          ss:d.status, ow:d.owner, ld:d.leads, mr:d.mrr
+        };
+        // 必須フィールドは常に含める、その他は値がある場合のみ
+        var required = ['i','n','pf','ci','ss'];
+        Object.keys(map).forEach(function(k) {
+          var v = map[k];
+          if(required.indexOf(k) >= 0) { rec[k] = v; }
+          else if(v !== null && v !== undefined && v !== '' && v !== 0 && v !== false) { rec[k] = v; }
+        });
+        byPref[pref].push(rec);
+      });
+
+      // 25MB制限対応：大きい都道府県は2分割
+      var MAX_PER_FILE = 10000; // 件数上限（10MB以内に収める）
+      var prefs = Object.keys(byPref);
+      var fileList = []; // {fname, data}
+      var index = {};
+
+      prefs.forEach(function(p) {
+        var rows = byPref[p];
+        if(rows.length > MAX_PER_FILE) {
+          // 動的分割（10000件ずつ）
+          var fnames = [];
+          var chunk = 0;
+          while(chunk * MAX_PER_FILE < rows.length) {
+            var start = chunk * MAX_PER_FILE;
+            var end = Math.min(start + MAX_PER_FILE, rows.length);
+            var fname = 'data_' + p + '_' + (chunk+1) + '.json';
+            fileList.push({fname: fname, data: rows.slice(start, end)});
+            fnames.push(fname);
+            chunk++;
+          }
+          index[p] = fnames.concat([rows.length]); // [fname1,fname2,...,total]
+        } else {
+          var fname = 'data_' + p + '.json';
+          fileList.push({fname: fname, data: rows});
+          index[p] = rows.length;
+        }
+      });
+
+      downloadFile('data_index.json', JSON.stringify(index));
+
+      var i = 0;
+      function next() {
+        if(i >= fileList.length) {
+          btn.textContent = '✅ ' + fileList.length + 'ファイル保存完了';
+          btn.disabled = false;
+          alert('✅ data_index.json と ' + fileList.length + '個のファイルを保存しました。\n\nすべてGitHubの同じリポジトリにアップロードしてください。');
+          return;
+        }
+        var f = fileList[i];
+        downloadFile(f.fname, JSON.stringify(f.data));
+        btn.textContent = '⏳ ' + (i+1) + '/' + fileList.length + ' 生成中...';
+        i++;
+        setTimeout(next, 300);
+      }
+      setTimeout(next, 500);
+
+    } catch(e) {
+      alert('エラー: ' + e.message);
+      btn.textContent = '💾 データを保存';
+      btn.disabled = false;
+    }
+  }, 100);
+}
+
+function downloadFile(filename, content) {
+  var blob = new Blob([content], {type:'application/json;charset=utf-8'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+}
+
+function exportCSV(){
+  var H=['LBC','社名','都道府県','市区町村','当期売上高（万円）','商談状況','取引先所有者','リード数','業種'];
+  var rows=filteredData.map(function(d){return[d.lbc,d.name,d.pref,d.city,d.salesNum>0?Math.round(d.salesNum/10000):'',d.status||'',d.owner,d.leads,d.industry];});
+  var csv=[H].concat(rows).map(function(r){return r.map(function(v){return'"'+String(v==null?'':v).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='アタックリスト_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+}
+
+// data_index.jsonがあれば都道府県別データを読み込む
+var prefDataCache = {}; // 読み込み済みデータのキャッシュ
+var prefIndex = {};     // 都道府県別件数インデックス
+
+function expandData(d) {
+  return {
+    id:d.i, lbc:d.i, name:d.n, kana:d.k||'',
+    pref:d.pf||'', city:d.ci||'', street:d.st||'', postal:d.po||'',
+    tel:d.t||'', fax:d.fx||'', url:d.u||'',
+    rep:d.r||'', repTitle:d.rt||'',
+    capital:d.ca||'', employees:d.em||'', founded:d.fn||'',
+    offices:d.of||0, listed:d.li||'',
+    industry:d.in||'', industryMid:d.im||'', industrySub:d.is||'',
+    period:d.pe||'', sales:[d.s2||0,d.s1||0,d.s0||0],
+    salesNum:d.s0||0, salesRange:d.sr||'',
+    deadline:d.dl||null, status:d.ss||'未対応',
+    owner:d.ow||'', leads:d.ld||0, mrr:d.mr||null, ng:d.ng||false,
+    news:[]
+  };
+}
+
+function loadPrefData(pref, callback) {
+  if(prefDataCache[pref]) { callback(prefDataCache[pref]); return; }
+  if(pref === '全国') { callback([]); return; }
+  var info = prefIndex[pref];
+  // 分割ファイルの場合 info = [fname1, fname2, ..., total]
+  if(Array.isArray(info)) {
+    var fnames = info.slice(0, info.length - 1); // 最後の要素はtotal件数
+    Promise.all(fnames.map(function(fname){ return fetch(fname).then(function(r){return r.json();}); }))
+      .then(function(results) {
+        var merged = [];
+        results.forEach(function(r){ merged = merged.concat(r); });
+        prefDataCache[pref] = merged.map(expandData);
+        callback(prefDataCache[pref]);
+      })
+      .catch(function(){ callback([]); });
+  } else {
+    fetch('data_' + pref + '.json')
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        prefDataCache[pref] = data.map(expandData);
+        callback(prefDataCache[pref]);
+      })
+      .catch(function(){ callback([]); });
+  }
+}
+
+fetch('data_index.json')
+  .then(function(r){ return r.json(); })
+  .then(function(idx){
+    prefIndex = idx;
+    var bn = document.getElementById('banner');
+    var total = Object.values(idx).reduce(function(a,b){return a+b;}, 0);
+    bn.textContent = '✅ ' + total.toLocaleString() + '件のデータが利用可能です（都道府県タブで切り替え）';
+    bn.style.color = '#059669';
+    // 初期は全国タブ → 最初の都道府県を読み込む
+    initUIWithIndex(idx);
+  })
+  .catch(function(){
+    allData = makeSample();
+    initUI();
+  });
+
+function initUIWithIndex(idx) {
+  var prefs = Object.keys(idx);
+  buildPrefTabsFromIndex(idx);
+  buildStatusFilters();
+  buildIndustryFilters();
+  // 最初の都道府県のデータを読み込む
+  if(prefs.length > 0) {
+    currentPref = prefs[0];
+    loadPrefData(prefs[0], function(data) {
+      allData = data;
+      document.getElementById('fc').textContent = data.length.toLocaleString();
+      document.getElementById('tc').textContent = data.length.toLocaleString();
+      buildStatusFilters();
+      buildIndustryFilters();
+      doFilter();
+    });
+  }
+}
+
+function buildPrefTabsFromIndex(idx) {
+  var prefs = Object.keys(idx);
+  var tabs = document.getElementById('ptabs');
+  tabs.innerHTML = prefs.map(function(p) {
+    var cnt = Array.isArray(idx[p]) ? idx[p][2] : idx[p];
+    return '<div class="ptab' + (p===currentPref?' on':'') + '" onclick="selectPrefTab(\'' + p + '\',this)">' +
+      p + ' <span class="n">' + cnt.toLocaleString() + '</span></div>';
+  }).join('');
+}
+
+function selectPrefTab(pref, el) {
+  currentPref = pref;
+  document.querySelectorAll('.ptab').forEach(function(t){t.classList.remove('on');});
+  el.classList.add('on');
+  var bn = document.getElementById('banner');
+  bn.textContent = '⏳ ' + pref + 'のデータを読み込み中...';
+  bn.style.color = '#2563eb';
+  loadPrefData(pref, function(data) {
+    allData = data;
+    bn.textContent = '✅ ' + pref + ': ' + data.length.toLocaleString() + '件';
+    bn.style.color = '#059669';
+    buildStatusFilters();
+    buildIndustryFilters();
+    selectedId = null;
+    document.getElementById('dp').classList.add('closed');
+    doFilter();
+  });
+}
+</script>
+</body>
+</html>
